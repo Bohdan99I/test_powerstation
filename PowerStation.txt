@@ -1,0 +1,92 @@
+class PowerStation {
+  constructor(batteryCapacity, maximumInput, maximumOutput) {
+    this.batteryCapacity = batteryCapacity;
+    this.maximumInput = maximumInput;
+    this.maximumOutput = maximumOutput;
+    this.currentBattery = batteryCapacity; 
+    this.inputPower = 0;
+    this.outputs = new Map();
+  }
+
+  updateInput(voltage, current) {
+    const inputPower = voltage * current;
+    this.inputPower = Math.min(inputPower, this.maximumInput); 
+  }
+
+  connectOutput(outputId) {
+    this.outputs.set(outputId, { voltage: 0, current: 0 });
+  }
+
+  updateOutput(outputId, voltage, current) {
+    if (this.outputs.has(outputId)) {
+      this.outputs.set(outputId, { voltage, current });
+    }
+  }
+
+  disconnectOutput(outputId) {
+    this.outputs.delete(outputId);
+  }
+
+  updateBatteryLevel(capacityLeft) {
+    this.currentBattery = Math.max(
+      0,
+      Math.min(capacityLeft, this.batteryCapacity)
+    );
+  }
+
+  get batteryPercentage() {
+    return Number(
+      ((this.currentBattery / this.batteryCapacity) * 100).toFixed(1)
+    );
+  }
+
+  get totalOutputPower() {
+    let totalPower = 0;
+    for (let { voltage, current } of this.outputs.values()) {
+      totalPower += voltage * current;
+    }
+    return Math.min(Math.round(totalPower), this.maximumOutput);
+  }
+
+  get timeRemaining() {
+    const netPower = this.inputPower - this.totalOutputPower;
+
+    if (netPower === 0) return "99:59";
+
+    let timeHours;
+    if (netPower > 0) {    
+      timeHours = (this.batteryCapacity - this.currentBattery) / netPower;
+    } else {    
+      timeHours = this.currentBattery / -netPower;
+    }
+
+    if (timeHours < 0 || !isFinite(timeHours)) {
+      return "99:59";
+    }
+
+    const totalMinutes = Math.round(timeHours * 60);
+    const hours = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
+    const minutes = String(totalMinutes % 60).padStart(2, "0");
+
+    return `${hours}:${minutes}`;
+  }
+
+  get status() {
+    if (
+      this.inputPower > this.maximumInput ||
+      this.totalOutputPower > this.maximumOutput
+    ) {
+      return "overload";
+    }
+
+    if (this.inputPower > this.totalOutputPower && this.inputPower > 0) {
+      return "charging";
+    }
+
+    if (this.totalOutputPower > this.inputPower && this.totalOutputPower > 0) {
+      return "discharging";
+    }
+
+    return "idle";
+  }
+}
